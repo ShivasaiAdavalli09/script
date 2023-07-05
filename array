@@ -1,0 +1,28 @@
+#!/bin/bash
+
+file1="file1.txt"
+file2="file2.txt"
+output_file="output.txt"
+
+# Compare files line by line and generate differences
+diff_output=$(diff "$file1" "$file2")
+
+# Extract only the lines present in the first file
+lines_file1=$(grep -E "^< " <<< "$diff_output" | cut -c3-)
+
+# Create a temporary file for modification
+cp "$file2" "$output_file"
+
+# Convert lines_file1 into an array
+IFS=$'\n' read -d '' -r -a lines_array <<< "$lines_file1"
+
+# Loop through the lines from the first file
+for line in "${lines_array[@]}"; do
+    # Find the line number in the second file
+    line_number=$(grep -nF "$line" "$output_file" | cut -d ":" -f 1)
+
+    # Replace the line in the second file
+    sed -i "${line_number}s/.*/$line/" "$output_file"
+done
+
+echo "Comparison complete. Changes applied to '$output_file'."
