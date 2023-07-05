@@ -1,0 +1,37 @@
+#!/bin/bash
+
+file1="file1.txt"
+file2="file2.txt"
+output_file="output.txt"
+
+# Compare files line by line and generate differences
+diff_output=$(diff "$file1" "$file2")
+
+# Extract only the lines present in the first file
+lines_file1=$(grep -E "^< " <<< "$diff_output" | cut -c3-)
+
+# Create a temporary file for modification
+cp "$file2" "$output_file"
+
+# Loop through the lines from the first file
+while IFS= read -r line; do
+    # Extract the starting and ending words from the line
+    starting_word=$(awk '{print $1}' <<< "$line")
+    ending_word=$(awk '{print $NF}' <<< "$line")
+
+    # Find the line number in the second file based on the starting word
+    start_line_number=$(awk -v word="$starting_word" '$0 ~ word {print NR}' "$output_file")
+
+    # Find the line number in the second file based on the ending word
+    end_line_number=$(awk -v word="$ending_word" '$0 ~ word {print NR}' "$output_file")
+
+    # Check if line numbers are found
+    if [ -n "$start_line_number" ] && [ -n "$end_line_number" ]; then
+        # Replace the portion of lines in the second file
+        sed -i "${start_line_number},${end_line_number}s/.*/$line/" "$output_file"
+    else
+        echo "Lines not found in the second file: $line"
+    fi
+done <<< "$lines_file1"
+
+echo "Comparison complete. Changes applied to '$output_file'."
